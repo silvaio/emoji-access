@@ -2,16 +2,22 @@
 
 A more reachable emoji overlay for [Omarchy](https://omarchy.org/) Quattro.
 
-The built-in picker is a glyph grid with substring search. This one keeps the same Super+Ctrl+E summon, then adds the things that make emojis actually findable:
+The built-in picker is a glyph grid centered on the screen. This one behaves like **Win+.**: a compact popup next to the pointer, then paste back into the window you were typing in.
 
+- **Super+.** (and Super+Ctrl+E) summons it
+- The popup sits **below the pointer**, so a tab-group rename or inline field stays visible
 - Search by **name and keyword**, ranked so `joy` lands on 😂 and `grin face` stays a grinning face
-- Typing switches to a **named list** so you can read the label, not guess the glyph
+- Typing switches to a **named list** so you can read the label
 - **Categories** down the left: Recent, Smileys, People, Nature, Food, Travel, Activities, Objects, Symbols, Flags
-- A **preview** of the current emoji with its official name
-- **Recents** remembered between summons
-- Enter inserts into the focused app; Shift+Enter or Ctrl+C copies
+- Enter inserts at the caret; Shift+Enter or Ctrl+C copies
 
 Enabling this plugin replaces `omarchy.emojis`, so the stock hotkey and `omarchy menu emoji` keep working.
+
+Add the Win+. binding in `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("SUPER + PERIOD", "Emojis", "omarchy-shell shell toggle omarchy.emojis")
+```
 
 ## Install
 
@@ -32,12 +38,13 @@ omarchy plugin add "$(pwd)" --enable --yes
 
 | Key | Action |
 |---|---|
+| Super+. | Open next to the pointer |
 | Type | Search by name or keyword |
 | Esc | Clear the search, or close |
 | Arrows | Move through the grid or list |
 | Tab / Shift+Tab | Next / previous category |
 | `[` `]` | Previous / next category |
-| Enter | Insert into the focused window |
+| Enter | Insert into the field you were editing |
 | Shift+Enter | Copy and close |
 | Ctrl+C | Copy and stay open |
 
@@ -62,7 +69,7 @@ python3 scripts/build-emojis.py
 ## Tests
 
 ```sh
-node --test tests/test-emoji-model.js
+node --test tests
 ```
 
 ## License

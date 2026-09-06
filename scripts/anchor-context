@@ -1,0 +1,14 @@
+#!/bin/bash
+# Snapshot the pointer, focused window, and monitors so the overlay can sit
+# next to the caret and paste back into the same client.
+set -euo pipefail
+
+cursor="$(hyprctl -j cursorpos 2>/dev/null || echo '{"x":0,"y":0}')"
+window="$(hyprctl -j activewindow 2>/dev/null || echo '{}')"
+monitors="$(hyprctl -j monitors 2>/dev/null || echo '[]')"
+
+jq -nc \
+  --argjson cursor "$cursor" \
+  --argjson window "$window" \
+  --argjson monitors "$monitors" \
+  '{cursor:$cursor,window:$window,monitors:$monitors}'

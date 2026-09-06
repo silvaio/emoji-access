@@ -5,6 +5,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "EmojiModel.js" as EmojiModel
+import "EmojiAnchor.js" as EmojiAnchor
 
 Item {
   id: root
@@ -17,6 +18,7 @@ Item {
   readonly property string statePath: Quickshell.env("HOME") + "/.local/state/omarchy/silvaio-emoji-access.json"
 
   property bool opened: false
+  property bool opening: false
   property string filterText: ""
   property string selectedCategory: "smileys"
   property int selectedIndex: 0
@@ -25,6 +27,10 @@ Item {
   property var emojiByChar: ({})
   property var recents: []
   property var filteredEmojis: []
+  property var anchorScreen: null
+  property int cardX: 0
+  property int cardY: 0
+  property string targetWindowAddress: ""
 
   property color background: Color.menu.background
   property color foreground: Color.menu.text
@@ -35,13 +41,19 @@ Item {
   property color selectedText: Color.menu.selectedText
   readonly property int cornerRadius: Style.cornerRadius
   property string fontFamily: Style.font.menuFamily
-  property int contentMargin: Style.spacing.panelPadding
-  property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)
-  property int footerHeight: Math.max(Style.space(64), Style.font.display + Style.font.caption + Style.spacing.md * 2)
-  property int contentSpacing: Style.spacing.md
-  property int cardWidth: Math.min(Style.space(760), panel.width - Style.gapsOut * 2)
-  property int cardHeight: Math.min(Style.space(540), panel.height - Style.gapsOut * 2)
-  property int sidebarWidth: Math.max(Style.space(148), Style.space(120))
+  property int contentMargin: Style.spacing.popupPadding
+  property int headerHeight: Math.max(Style.space(30), Style.font.title + Style.spacing.controlPaddingY * 2)
+  property int footerHeight: Math.max(Style.space(52), Style.font.title + Style.font.caption + Style.spacing.sm * 2)
+  property int contentSpacing: Style.spacing.sm
+  property int cardWidth: {
+    var screenW = anchorScreen ? anchorScreen.width : Style.space(420)
+    return Math.min(Style.space(420), Math.max(Style.space(280), screenW - Style.space(24)))
+  }
+  property int cardHeight: {
+    var screenH = anchorScreen ? anchorScreen.height : Style.space(400)
+    return Math.min(Style.space(400), Math.max(Style.space(260), screenH - Style.space(24)))
+  }
+  property int sidebarWidth: Math.max(Style.space(108), Style.space(96))
   property int cellWidth: Math.max(Style.space(48), Style.font.display + Style.spacing.lg)
   property int cellHeight: Math.max(Style.space(48), Style.font.display + Style.spacing.lg)
   property int rowHeight: Math.max(Style.space(48), Style.font.title + Style.font.caption + Style.spacing.rowPaddingX)
@@ -53,29 +65,68 @@ Item {
     : null
 
   function open(payloadJson) {
-    root.opened = true
+    if (root.opened || root.opening) return
+    root.opening = true
     root.filterText = ""
     root.selectedCategory = EmojiModel.defaultCategory(root.recents)
     root.selectedIndex = 0
     root.cursorActive = true
     root.rebuildCategories()
     root.rebuildDisplay()
-    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    root.refreshAnchor()
   }
 
   function close() {
+    root.opening = false
     root.opened = false
   }
 
   function dismiss() {
+    root.opening = false
     root.opened = false
     if (root.shell && typeof root.shell.hide === "function")
       root.shell.hide((root.manifest && root.manifest.id) || "silvaio.emoji-access")
   }
 
   function toggle() {
-    if (root.opened) root.dismiss()
+    if (root.opened || root.opening) root.dismiss()
     else root.open("{}")
+  }
+
+  function findScreen(name) {
+    var screens = Quickshell.screens
+    var i
+    if (name) {
+      for (i = 0; i < screens.length; i++) {
+        if (String(screens[i].name) === String(name)) return screens[i]
+      }
+    }
+    return screens.length > 0 ? screens[0] : null
+  }
+
+  function refreshAnchor() {
+    if (anchorProc.running) anchorProc.running = false
+    anchorProc.running = true
+  }
+
+  function applyAnchorContext(raw) {
+    if (!root.opening) return
+    var ctx = EmojiAnchor.parseContext(raw)
+    var monitor = EmojiAnchor.monitorForCursor(ctx.monitors, ctx.cursor)
+    var screen = root.findScreen(monitor && monitor.name)
+    root.anchorScreen = screen
+    var panelW = screen ? screen.width : 0
+    var panelH = screen ? screen.height : 0
+    var gap = Style.space(12)
+    var pos = monitor
+      ? EmojiAnchor.placeCard(ctx.cursor.x, ctx.cursor.y, monitor, panelW, panelH, root.cardWidth, root.cardHeight, gap)
+      : EmojiAnchor.centerCard(panelW, panelH, root.cardWidth, root.cardHeight)
+    root.cardX = pos.x
+    root.cardY = pos.y
+    root.targetWindowAddress = EmojiAnchor.windowAddress(ctx.window)
+    root.opening = false
+    root.opened = true
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
   function disarmPointer() {
@@ -257,9 +308,15 @@ Item {
 
   function applySelected(emoji) {
     if (!emoji) return
+    var address = root.targetWindowAddress
     root.recordRecent(emoji)
     root.dismiss()
-    Quickshell.execDetached([root.omarchyPath + "/bin/omarchy-menu-emoji-insert", emoji])
+    Quickshell.execDetached([
+      root.pluginDir + "/scripts/insert-emoji",
+      address,
+      emoji,
+      root.omarchyPath + "/bin/omarchy-menu-emoji-insert"
+    ])
   }
 
   ListModel { id: displayModel }
@@ -284,20 +341,29 @@ Item {
     onLoadFailed: root.loadState("{}")
   }
 
+  Process {
+    id: anchorProc
+    command: [root.pluginDir + "/scripts/anchor-context"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.applyAnchorContext(text())
+    }
+    onExited: function(exitCode) {
+      if (exitCode !== 0 && root.opening && !root.opened)
+        root.applyAnchorContext("{}")
+    }
+  }
+
   PanelWindow {
     id: panel
     visible: root.opened
+    screen: root.anchorScreen
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     WlrLayershell.namespace: "omarchy-emojis"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
     exclusionMode: ExclusionMode.Ignore
-
-    Rectangle {
-      anchors.fill: parent
-      color: root.scrim
-    }
 
     MouseArea {
       anchors.fill: parent
@@ -306,10 +372,11 @@ Item {
 
     BorderSurface {
       id: card
+      x: root.cardX
+      y: root.cardY
       width: root.cardWidth
       height: root.cardHeight
       radius: root.cornerRadius
-      anchors.centerIn: parent
       color: root.background
       borderSpec: root.borderSpec
       padding: root.contentMargin

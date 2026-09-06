@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "silvaio.emoji-access",
   "name": "Emoji Access",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "silvaio",
   "license": "MIT",
   "homepage": "https://github.com/silvaio/emoji-access",
-  "description": "An accessible emoji overlay: search by name, browse categories, reuse recents, and see the label before you insert.",
+  "description": "A Win+. style emoji popup: search by name, sit next to the caret, and insert into the field you were editing.",
   "keywords": [
     "emoji",
     "picker",
