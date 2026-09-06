@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "silvaio.emoji-access",
+  "name": "Emoji Access",
+  "version": "1.0.0",
+  "author": "silvaio",
+  "license": "MIT",
+  "homepage": "https://github.com/silvaio/emoji-access",
+  "description": "An accessible emoji overlay: search by name, browse categories, reuse recents, and see the label before you insert.",
+  "keywords": [
+    "emoji",
+    "picker",
+    "overlay",
+    "accessibility",
+    "search"
+  ],
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "EmojiAccess.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.emojis"
+  }
+}
