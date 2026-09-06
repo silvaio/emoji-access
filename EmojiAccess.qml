@@ -354,7 +354,7 @@ Item {
     command: [root.pluginDir + "/scripts/anchor-context"]
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.applyAnchorContext(text())
+      onStreamFinished: root.applyAnchorContext(text)
     }
     onExited: function(exitCode) {
       if (exitCode !== 0 && root.opening && !root.opened)
