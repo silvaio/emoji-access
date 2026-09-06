@@ -20,6 +20,7 @@ Item {
   property bool opened: false
   property bool opening: false
   property bool grabKeyboard: false
+  property bool inserting: false
   property string filterText: ""
   property string selectedCategory: "smileys"
   property int selectedIndex: 0
@@ -69,6 +70,7 @@ Item {
     if (root.opened || root.opening) return
     root.opening = true
     root.grabKeyboard = false
+    root.inserting = false
     root.filterText = ""
     root.selectedCategory = EmojiModel.defaultCategory(root.recents)
     root.selectedIndex = 0
@@ -316,12 +318,11 @@ Item {
   }
 
   function applySelected(emoji) {
-    if (!emoji) return
-    var address = root.targetWindowAddress
+    if (!emoji || root.inserting) return
+    root.inserting = true
     root.recordRecent(emoji)
     Quickshell.execDetached([
       root.pluginDir + "/scripts/insert-emoji",
-      address,
       emoji
     ])
     root.dismiss()

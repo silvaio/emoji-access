@@ -1,27 +1,12 @@
 #!/bin/bash
-# Paste into the window that was focused when the picker opened.
-# Do not focus that window first: Chromium tab/group rename dies on focus loss.
-# Unicode cannot be typed through a virtual keyboard, so this copies then
-# sends Shift+Insert to the original client.
+# Paste once into whichever client still has the keyboard.
+# The overlay must not steal focus; a virtual keyboard cannot type emoji
+# codepoints, so this copies then sends a single Shift+Insert.
 set -u
 
-address="${1:-}"
-emoji="${2:-}"
-
+emoji="${1:-}"
 [[ -n $emoji ]] || exit 1
 
 printf '%s' "$emoji" | wl-copy --type text/plain --sensitive
-
 sleep 0.05
-
-paste_lua() {
-  if [[ $address =~ ^0x[0-9a-fA-F]+$ ]]; then
-    printf 'hl.dispatch(hl.dsp.send_shortcut({ mods = "SHIFT", key = "Insert", window = "address:%s" }))' "$address"
-  else
-    printf 'hl.dispatch(hl.dsp.send_shortcut({ mods = "SHIFT", key = "Insert" }))'
-  fi
-}
-
-if ! hyprctl dispatch "$(paste_lua)" >/dev/null 2>&1; then
-  wtype -M shift -k Insert -m shift 2>/dev/null || true
-fi
+wtype -M shift -k Insert -m shift
