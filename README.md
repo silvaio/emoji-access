@@ -5,11 +5,10 @@ A more reachable emoji overlay for [Omarchy](https://omarchy.org/) Quattro.
 The built-in picker is a glyph grid centered on the screen. This one behaves like **Win+.**: a compact popup next to the pointer, then paste back into the window you were typing in.
 
 - **Super+.** (and Super+Ctrl+E) summons it
-- The popup sits **below the pointer**, so a tab-group rename or inline field stays visible
+- The popup sits **below the pointer** and does **not steal keyboard focus**, so a Chromium tab rename stays in edit mode
+- Click an emoji to insert it at the caret; click the search row if you want to type-filter (that does take focus)
 - Search by **name and keyword**, ranked so `joy` lands on 😂 and `grin face` stays a grinning face
-- Typing switches to a **named list** so you can read the label
 - **Categories** down the left: Recent, Smileys, People, Nature, Food, Travel, Activities, Objects, Symbols, Flags
-- Enter inserts at the caret; Shift+Enter or Ctrl+C copies
 
 Enabling this plugin replaces `omarchy.emojis`, so the stock hotkey and `omarchy menu emoji` keep working.
 
@@ -38,15 +37,13 @@ omarchy plugin add "$(pwd)" --enable --yes
 
 | Key | Action |
 |---|---|
-| Super+. | Open next to the pointer |
-| Type | Search by name or keyword |
-| Esc | Clear the search, or close |
+| Super+. | Open next to the pointer (keys stay in the app) |
+| Click an emoji | Insert at the caret |
+| Click search | Type to filter (takes keyboard) |
+| Esc | Clear the search, or close (after search is focused) |
 | Arrows | Move through the grid or list |
 | Tab / Shift+Tab | Next / previous category |
-| `[` `]` | Previous / next category |
 | Enter | Insert into the field you were editing |
-| Shift+Enter | Copy and close |
-| Ctrl+C | Copy and stay open |
 
 Click a category to browse. Click an emoji to insert it.
 

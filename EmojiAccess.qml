@@ -19,6 +19,7 @@ Item {
 
   property bool opened: false
   property bool opening: false
+  property bool grabKeyboard: false
   property string filterText: ""
   property string selectedCategory: "smileys"
   property int selectedIndex: 0
@@ -67,6 +68,7 @@ Item {
   function open(payloadJson) {
     if (root.opened || root.opening) return
     root.opening = true
+    root.grabKeyboard = false
     root.filterText = ""
     root.selectedCategory = EmojiModel.defaultCategory(root.recents)
     root.selectedIndex = 0
@@ -78,14 +80,22 @@ Item {
 
   function close() {
     root.opening = false
+    root.grabKeyboard = false
     root.opened = false
   }
 
   function dismiss() {
     root.opening = false
+    root.grabKeyboard = false
     root.opened = false
     if (root.shell && typeof root.shell.hide === "function")
       root.shell.hide((root.manifest && root.manifest.id) || "silvaio.emoji-access")
+  }
+
+  function grabForSearch() {
+    if (!root.opened) return
+    root.grabKeyboard = true
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
   function toggle() {
@@ -126,7 +136,6 @@ Item {
     root.targetWindowAddress = EmojiAnchor.windowAddress(ctx.window)
     root.opening = false
     root.opened = true
-    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
   function disarmPointer() {
@@ -310,13 +319,12 @@ Item {
     if (!emoji) return
     var address = root.targetWindowAddress
     root.recordRecent(emoji)
-    root.dismiss()
     Quickshell.execDetached([
       root.pluginDir + "/scripts/insert-emoji",
       address,
-      emoji,
-      root.omarchyPath + "/bin/omarchy-menu-emoji-insert"
+      emoji
     ])
+    root.dismiss()
   }
 
   ListModel { id: displayModel }
@@ -358,30 +366,27 @@ Item {
     id: panel
     visible: root.opened
     screen: root.anchorScreen
-    anchors { top: true; bottom: true; left: true; right: true }
+    implicitWidth: root.cardWidth
+    implicitHeight: root.cardHeight
+    anchors { left: true; top: true }
+    margins.left: root.cardX
+    margins.top: root.cardY
     color: "transparent"
+    focusable: root.grabKeyboard
     WlrLayershell.namespace: "omarchy-emojis"
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    WlrLayershell.keyboardFocus: root.opened && root.grabKeyboard
+      ? WlrKeyboardFocus.Exclusive
+      : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
-
-    MouseArea {
-      anchors.fill: parent
-      onClicked: root.dismiss()
-    }
 
     BorderSurface {
       id: card
-      x: root.cardX
-      y: root.cardY
-      width: root.cardWidth
-      height: root.cardHeight
+      anchors.fill: parent
       radius: root.cornerRadius
       color: root.background
       borderSpec: root.borderSpec
       padding: root.contentMargin
-
-      MouseArea { anchors.fill: parent; onClicked: {} }
 
       Item {
         id: keyCatcher
@@ -472,12 +477,18 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            text: root.filterText || "Search by name or keyword…"
+            text: root.filterText || (root.grabKeyboard ? "Search by name or keyword…" : "Click to search · click an emoji to insert")
             color: root.foreground
             opacity: root.filterText ? 1 : 0.58
             font.family: root.fontFamily
             font.pixelSize: Style.font.heading
             elide: Text.ElideRight
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.IBeamCursor
+            onClicked: root.grabForSearch()
           }
         }
 
@@ -775,9 +786,11 @@ Item {
 
               Text {
                 textFormat: Text.PlainText
-                text: root.activeRow
-                  ? "Enter insert  ·  Shift+Enter copy  ·  Ctrl+C copy  ·  Tab category"
-                  : "Tab cycles categories  ·  Type to search"
+                text: root.grabKeyboard
+                  ? (root.activeRow
+                    ? "Enter insert  ·  Shift+Enter copy  ·  Ctrl+C copy  ·  Tab category"
+                    : "Tab cycles categories  ·  Type to search")
+                  : "Click an emoji to insert here  ·  Super+. to close"
                 color: root.foreground
                 opacity: 0.55
                 font.family: root.fontFamily

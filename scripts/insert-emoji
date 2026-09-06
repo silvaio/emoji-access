@@ -1,28 +1,27 @@
 #!/bin/bash
-# Close the overlay first, then paste into the window that was focused when
-# the picker opened. Clipboard + Shift+Insert is what actually injects Unicode;
-# a virtual keyboard cannot type emoji codepoints.
+# Paste into the window that was focused when the picker opened.
+# Do not focus that window first: Chromium tab/group rename dies on focus loss.
+# Unicode cannot be typed through a virtual keyboard, so this copies then
+# sends Shift+Insert to the original client.
 set -u
 
 address="${1:-}"
 emoji="${2:-}"
-insert="${3:-}"
 
 [[ -n $emoji ]] || exit 1
 
-sleep 0.12
-if [[ -n $address ]]; then
-  hyprctl dispatch focuswindow "address:$address" >/dev/null 2>&1 || true
-  sleep 0.06
-fi
+printf '%s' "$emoji" | wl-copy --type text/plain --sensitive
 
-if [[ -n $insert && -x $insert ]]; then
-  exec "$insert" "$emoji"
-fi
+sleep 0.05
 
-printf '%s' "$emoji" | wl-copy --type text/plain --sensitive --foreground &
-copy_pid=$!
-sleep 0.15
-wtype -M shift -k Insert -m shift 2>/dev/null || true
-sleep 0.2
-kill "$copy_pid" 2>/dev/null || true
+paste_lua() {
+  if [[ $address =~ ^0x[0-9a-fA-F]+$ ]]; then
+    printf 'hl.dispatch(hl.dsp.send_shortcut({ mods = "SHIFT", key = "Insert", window = "address:%s" }))' "$address"
+  else
+    printf 'hl.dispatch(hl.dsp.send_shortcut({ mods = "SHIFT", key = "Insert" }))'
+  fi
+}
+
+if ! hyprctl dispatch "$(paste_lua)" >/dev/null 2>&1; then
+  wtype -M shift -k Insert -m shift 2>/dev/null || true
+fi
