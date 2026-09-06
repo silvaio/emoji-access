@@ -28,6 +28,24 @@ function windowAddress(window) {
   return addr
 }
 
+function windowClass(window) {
+  if (!window || typeof window !== "object") return ""
+  return String(window.class || window.initialClass || "")
+}
+
+function isBrowserClass(value) {
+  var cls = String(value || "").toLowerCase()
+  if (!cls) return false
+  var names = [
+    "chromium", "chrome", "brave", "firefox", "librewolf",
+    "vivaldi", "microsoft-edge", "zen", "thorium", "opera", "ungoogled"
+  ]
+  for (var i = 0; i < names.length; i++) {
+    if (cls.indexOf(names[i]) >= 0) return true
+  }
+  return false
+}
+
 function monitorForCursor(monitors, cursor) {
   var list = Array.isArray(monitors) ? monitors : []
   var x = Number(cursor && cursor.x)
@@ -97,6 +115,8 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseContext: parseContext,
     windowAddress: windowAddress,
+    windowClass: windowClass,
+    isBrowserClass: isBrowserClass,
     monitorForCursor: monitorForCursor,
     centerCard: centerCard,
     placeCard: placeCard

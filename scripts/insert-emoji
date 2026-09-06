@@ -1,12 +1,41 @@
 #!/bin/bash
-# Paste once into whichever client still has the keyboard.
-# The overlay must not steal focus; a virtual keyboard cannot type emoji
-# codepoints, so this copies then sends a single Shift+Insert.
+# Insert one emoji into the client that still has the keyboard.
+# Browser web modals ignore Shift+Insert and often refuse a "sensitive"
+# clipboard, so Chromium/Firefox get a normal clipboard + Ctrl+V via Hyprland.
+# Other apps keep Shift+Insert. The clipboard helper is killed afterwards so
+# the previous clipboard comes back.
 set -u
 
 emoji="${1:-}"
+address="${2:-}"
+class="${3:-}"
+
 [[ -n $emoji ]] || exit 1
 
-printf '%s' "$emoji" | wl-copy --type text/plain --sensitive
-sleep 0.05
-wtype -M shift -k Insert -m shift
+is_browser() {
+  local cls
+  cls="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+  case "$cls" in
+    *chromium*|*chrome*|*brave*|*firefox*|*librewolf*|*vivaldi*|*microsoft-edge*|*zen*|*thorium*|*opera*|*ungoogled*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+printf '%s' "$emoji" | wl-copy --type text/plain --foreground &
+copy_pid=$!
+
+sleep 0.15
+
+if is_browser "$class" && [[ $address =~ ^0x[0-9a-fA-F]+$ ]]; then
+  hyprctl dispatch "hl.dsp.send_shortcut({ mods = \"CTRL\", key = \"V\", window = \"address:${address}\" })" >/dev/null 2>&1 \
+    || wtype -M ctrl -k v 2>/dev/null || true
+elif is_browser "$class"; then
+  wtype -M ctrl -k v 2>/dev/null || true
+else
+  wtype -M shift -k Insert -m shift 2>/dev/null || true
+fi
+
+sleep 0.2
+kill "$copy_pid" 2>/dev/null || true

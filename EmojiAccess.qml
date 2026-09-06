@@ -33,6 +33,7 @@ Item {
   property int cardX: 0
   property int cardY: 0
   property string targetWindowAddress: ""
+  property string targetWindowClass: ""
 
   property color background: Color.menu.background
   property color foreground: Color.menu.text
@@ -136,6 +137,7 @@ Item {
     root.cardX = pos.x
     root.cardY = pos.y
     root.targetWindowAddress = EmojiAnchor.windowAddress(ctx.window)
+    root.targetWindowClass = EmojiAnchor.windowClass(ctx.window)
     root.opening = false
     root.opened = true
   }
@@ -321,11 +323,14 @@ Item {
     if (!emoji || root.inserting) return
     root.inserting = true
     root.recordRecent(emoji)
-    Quickshell.execDetached([
+    insertProc.running = false
+    insertProc.command = [
       root.pluginDir + "/scripts/insert-emoji",
-      emoji
-    ])
-    root.dismiss()
+      emoji,
+      root.targetWindowAddress,
+      root.targetWindowClass
+    ]
+    insertProc.running = true
   }
 
   ListModel { id: displayModel }
@@ -348,6 +353,11 @@ Item {
     printErrors: false
     onLoaded: root.loadState(text())
     onLoadFailed: root.loadState("{}")
+  }
+
+  Process {
+    id: insertProc
+    onExited: root.dismiss()
   }
 
   Process {

@@ -23,6 +23,15 @@ test("windowAddress ignores empty and null addresses", () => {
   assert.equal(anchor.windowAddress(null), "")
 })
 
+test("isBrowserClass matches Chromium-family window classes", () => {
+  assert.equal(anchor.windowClass({ class: "chromium" }), "chromium")
+  assert.equal(anchor.isBrowserClass("chromium"), true)
+  assert.equal(anchor.isBrowserClass("google-chrome"), true)
+  assert.equal(anchor.isBrowserClass("firefox"), true)
+  assert.equal(anchor.isBrowserClass("Alacritty"), false)
+  assert.equal(anchor.isBrowserClass(""), false)
+})
+
 test("monitorForCursor picks the output under the pointer", () => {
   const left = { name: "left", x: 0, y: 0, width: 1920, height: 1080, focused: false }
   const right = { name: "right", x: 1920, y: 0, width: 1920, height: 1080, focused: true }
